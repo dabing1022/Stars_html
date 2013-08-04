@@ -28,6 +28,10 @@ package
 		private static const VERSION:String = "1.2";
 		//显示形状类型
 		public static const TRandom:String = "1";
+		/**1_1,代表<随机_静止图片>*/
+		public static const TRandom1_1:String = "1_1";
+		/**1_2,代表<随机_GIF图片>*/
+		public static const TRandom1_2:String = "1_2";
 		public static const T365:String = "365";
 		public static const T520:String = "520";
 		public static const T999:String = "999";
@@ -39,6 +43,7 @@ package
 		private var realPicNum:int;
 		//显示图标资源
 		private var imgData:BitmapData;
+		private var imgUrl:String;
 		//当前显示的实例
 		private var actionInstance:Sprite;
 		
@@ -57,19 +62,19 @@ package
 		private var loader:Loader;
 		private function onAddedToStage(e:Event):void{
 			stage.scaleMode = StageScaleMode.SHOW_ALL;
-			var url:String = this.stage.loaderInfo.parameters["imgUrl"];
-			if(url == null){
+			imgUrl = this.stage.loaderInfo.parameters["imgUrl"];
+			if(imgUrl == null){
 				if(ExternalInterface.available)
 				{
 					ExternalInterface.call("trace", "无效图片地址！");
 				}
 			}else{
 				loader = new Loader();
-				var policyFile:String = getPolicyFileByUrl(url);
+				var policyFile:String = getPolicyFileByUrl(imgUrl);
 				Security.loadPolicyFile(policyFile);
 				loader.contentLoaderInfo.addEventListener(Event.COMPLETE,onLoadImgComplete);
 				loader.contentLoaderInfo.addEventListener(IOErrorEvent.IO_ERROR,onIOError);
-				loader.load(new URLRequest(url));
+				loader.load(new URLRequest(imgUrl));
 			}
 		}
 		
@@ -91,13 +96,24 @@ package
 			realPicNum = picNum;
 			if(picNum>99 && picNum<365)
 				picNum = 99;
-			if(picNum<11)
-				return;
 			switch(showType)
 			{
 				case TRandom:
 					actionInstance = new LRandom(picNum,imgData);
 					this.addChild(actionInstance);
+					break;
+				case TRandom1_1:
+					actionInstance = new LRandom(picNum,imgData);
+					this.addChild(actionInstance);
+					break;
+				case TRandom1_2:
+					var startIndex:int = imgUrl.lastIndexOf("/");
+					var endIndex:int = imgUrl.lastIndexOf(".png");
+					var gifID:String = imgUrl.substr(startIndex + 1, endIndex - startIndex - 1);
+					ExternalInterface.call("trace", gifID);
+					actionInstance = new LRandomGif(realPicNum, gifID);
+					this.addChild(actionInstance);
+					showText(LRandomGif.cardX,LRandomGif.cardY);
 					break;
 				case T365:
 					actionInstance = new Anime365();
@@ -130,7 +146,8 @@ package
 					showText(L9999.cardX,L9999.cardY);
 					break;
 			}
-			TweenMax.to(textBox,2,{delay:3,autoAlpha:1});
+			if(textBox)
+				TweenMax.to(textBox,4,{delay:2,autoAlpha:1});
 		}
 				
 		private function onLoadImgComplete(e:Event):void{
